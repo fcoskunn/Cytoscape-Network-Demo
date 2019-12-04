@@ -1,0 +1,353 @@
+<!DOCTYPE>
+
+<html>
+
+<head>
+    <title>GLB301 Cytoscape Simulation</title>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+    <script src="cytoscape.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/2.5.7/shim.min.js"></script>
+    <script src="layout-base.js"></script>
+    <script src="https://unpkg.com/cose-base/cose-base.js"></script>
+    <script src="cytoscape-cose-bilkent.js"></script>
+    <script src="https://unpkg.com/cytoscape-canvas/dist/cytoscape-canvas.js"></script>
+    <script src="cytoscape-no-overlap.js"></script>
+
+
+    <style>
+        body {
+            font-family: helvetica;
+            font-size: 15px;
+        }
+        
+        #cy {
+            width: 100%;
+            height: 90%;
+            z-index: 999;
+            position: absolute;
+        }
+        
+        h1 {
+            opacity: 0.5;
+            font-size: 1em;
+            font-weight: bold;
+        }
+        
+        button {
+            font-size: 15px;
+            margin-right: 10px;
+        }
+        
+        .line {
+            clear: left;
+            height: 25px;
+            margin-top: 6px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .radio {
+            margin-left: 25px;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var cy = window.cy = cytoscape({
+                container: document.getElementById('cy'),
+                ready: function() {
+                    this.nodes().forEach(function(node) {
+                        let width = [30, 70, 110];
+                        let size = width[0.2];
+                        node.css("width", size);
+                        node.css("height", size);
+                    });
+                    this.layout({
+                        name: 'random',
+                        animationDuration: 1000
+                    }).run();
+                },
+
+                style: [{
+                        selector: 'node',
+                        style: {
+                            'background-color': '#126814'
+                        }
+                    },
+
+                    {
+                        selector: ':parent',
+                        style: {
+                            'background-color': '#bf1818'
+                        }
+                    },
+
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 3,
+                            'line-color': '#126814',
+                            'opacity': 0.5
+                        }
+                    }
+                ],
+
+                elements: [],
+            });
+
+            var bases = new Array();
+            var maxWidth = -1;
+            var minWidth = 999999;
+            var maxHeight = -1;
+            var minHeight = 999999;
+            var animateStatus = false;
+            var numberOfPoints = 0;
+
+            function addSeveralRandomPoints(currentNodeNumber) {
+                var i;
+                for (i = currentNodeNumber; i < numberOfPoints; i++) {
+                    cy.add({
+                        group: 'nodes',
+                        id: i,
+                    });
+                }
+            }
+
+            function setSizeOfRandomPoints() {
+                cy.remove(cy.nodes());
+                addSeveralRandomPoints();
+                document.getElementById("layoutButton").click();
+
+            }
+
+            function Create2DArray(rows) {
+                var arr = [];
+                for (var i = 0; i < rows; i++) {
+                    arr[i] = [];
+                }
+                return arr;
+            }
+
+            function removeBases() {
+                bases.forEach(function(id) {
+                    cy.remove(cy.getElementById(id));
+                });
+                bases = new Array();
+            }
+
+            function addBaseStation() {
+                var bound = 180 * Math.sqrt(numberOfPoints);
+                var added = cy.add({
+                    group: 'nodes',
+                    name: 'base',
+                    style: {
+                        'background-color': '#00695C',
+                        'shape': 'ellipse',
+                        'background-opacity': 0.5,
+                        'width': bound,
+                        'height': bound,
+                        'border-style': 'dotted',
+                        'border-width': 4,
+                        'border-opacity': 0.3,
+                    },
+                    position: {
+                        x: Math.floor((maxWidth - minWidth) / 2),
+                        y: Math.floor((maxHeight - minHeight) / 2)
+                    }
+
+                }, );
+                bases.push(added.id());
+            }
+
+            function setRandomPositions() {
+                var positionsX = new Array();
+                var positionsY = new Array();
+                var positionSize = cy.nodes().length;
+                for (var i = 0; i < positionSize; i++) {
+                    positionsX[i] = i;
+                    positionsY[i] = i;
+                }
+                for (var i = 0; i < positionSize; i++) {
+                    var change_index = Math.floor(positionSize * Math.random());
+                    temp = positionsX[i];
+                    positionsX[i] = positionsX[change_index];
+                    positionsX[change_index] = temp;
+
+                    change_index = Math.floor(positionSize * Math.random());
+                    temp = positionsY[i];
+                    positionsY[i] = positionsY[change_index];
+                    positionsY[change_index] = temp;
+                }
+                var i = 0;
+                var j = 0;
+                cy.nodes().forEach(function(node) {
+                    var posX = positionsX[i] * 30;
+                    var posY = positionsY[j] * 15;
+                    node.position().x = posX;
+                    node.position().y = posY;
+                    if (posX > maxWidth) maxWidth = posX;
+                    if (posX < minWidth) minWidth = posX;
+                    if (posY > maxHeight) maxHeight = posY;
+                    if (posY < minHeight) minHeight = posY;
+                    i++;
+                    j++;
+                });
+            }
+
+            function calcDistanceArray() {
+                var array = Create2DArray(numberOfPoints);
+                var lenOfNodes = cy.nodes().length;
+                var bound = 18 * Math.sqrt(numberOfPoints);
+                var cw = Math.floor((maxWidth - minWidth) / 2);
+                var ch = Math.floor((maxHeight - minHeight) / 2);
+
+                var i = 0;
+                var j = 0;
+                cy.nodes().forEach(function(node1) {
+                    cy.nodes().forEach(function(node2) {
+                        var x1 = node1.relativePosition().x;
+                        var y1 = node1.relativePosition().y;
+                        var x2 = node2.relativePosition().x;
+                        var y2 = node2.relativePosition().y;
+                        var a = x2 - x1;
+                        var b = y2 - y1;
+                        var distance = Math.sqrt(a * a + b * b);
+                        array[i][j] = distance;
+                        if (distance < bound && distance != 0) {
+                            cy.add({
+                                data: {
+                                    source: node1.id(),
+                                    target: node2.id(),
+                                    style: {
+                                        'line-dash-pattern': [6, 3],
+                                        'line-dash-offset': 0,
+                                    }
+                                }
+                            });
+                        }
+                        j++;
+
+                    });
+                    /*
+                    if (isInside(node1.position().x, node1.position().y, cw, ch, bound * 5)) {
+                        node1.style('background-color', 'yellow');
+                    }
+                    */
+                    i++;
+                });
+                return array;
+            }
+
+            function refreshEdges() {
+                cy.remove(cy.edges());
+                var distanceMatrix = calcDistanceArray();
+                var els = cy.elements().kruskal();
+                cy.elements().remove();
+                cy.add(els);
+            }
+
+            function isInside(px, py, cx, cy, len) {
+                var a = px - cx;
+                var b = py - cy;
+                var distance = Math.sqrt(a * a + b * b);
+                return distance <= len;
+            }
+
+            document.getElementById("layoutButton").addEventListener("click", function() {
+                animateStatus = false;
+                removeBases();
+                numberOfPoints = document.getElementById("pointCount").value;
+                var currentSize = cy.nodes().length;
+                if (currentSize > numberOfPoints) {
+                    setSizeOfRandomPoints();
+
+                } else {
+                    addSeveralRandomPoints(currentSize);
+                }
+
+                var layout = cy.layout({
+                    name: 'preset',
+                    nodeSeparation: 125,
+                    fit: true,
+                    padding: 30,
+                    animate: false,
+                    animation: 'ease-in-out',
+                    animationDuration: 1000,
+                });
+                cy.remove(cy.edges());
+                setRandomPositions();
+                layout.run();
+            });
+            document.getElementById("baseButton").addEventListener("click", function() {
+                //removeBases();
+                addBaseStation();
+            });
+
+            document.getElementById("animateButton").addEventListener("click", function() {
+                if (!animateStatus) {
+                    animateStatus = true;
+                    animateNodes();
+                }
+            });
+
+            cy.on('click', function(e) {
+                var clickedNode = e.target;
+                console.log(clickedNode.$id());
+            });
+
+            cy.on('dragon', function(e) {
+                clearInterval(r_draw);
+            });
+
+            cy.on('dragfreeon', function(e) {
+                refreshEdges()
+            });
+
+            function animateNodes() {
+                var offset = Math.sqrt(numberOfPoints) * 4;
+                cy.nodes().layout({
+                    name: 'preset',
+                    dsa: 'tes',
+                    animate: 'end',
+                    fit: false,
+                    animationEasing: 'ease-in-out',
+                    transform: (node) => {
+                        let position = {};
+                        position.x = (Math.floor(Math.random() * offset) - offset / 2) + node.position('x');
+                        position.y = (Math.floor(Math.random() * offset) - offset / 2) + node.position('y');
+                        return position;
+                    }
+                }).run();
+                refreshEdges();
+            }
+
+            cy.on('layoutstop', function(e) {
+                if (e.target.options.dsa && animateStatus) {
+                    animateNodes();
+                } else if (!e.target.options.dsa) {
+                    refreshEdges();
+                }
+            });
+
+            function sleep(time) {
+                return new Promise((resolve) => setTimeout(resolve, time));
+            }
+
+        });
+    </script>
+</head>
+
+<body>
+    <h1 id="kss">GLB 301 Simulation</h1>
+    <input id="pointCount" type="number" style="width: 60px;" name="quantity" min="1" max="999" value="40">
+    <a data-toggle="tooltip" data-placement="auto">
+        <button id="layoutButton" type="button">Randomize</button>
+        <button id="baseButton" type="button">Base</button>
+        <button id="animateButton" type="button">Animate</button>
+        <div id="cy"></div>
+
+</body>
+
+</html>
