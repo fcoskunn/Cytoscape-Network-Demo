@@ -1,5 +1,4 @@
-<!DOCTYPE>
-
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -7,13 +6,13 @@
     <meta charset="utf-8" />
 
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
-    <script src="cytoscape.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/2.5.7/shim.min.js"></script>
-    <script src="layout-base.js"></script>
-    <script src="https://unpkg.com/cose-base/cose-base.js"></script>
-    <script src="cytoscape-cose-bilkent.js"></script>
-    <script src="https://unpkg.com/cytoscape-canvas/dist/cytoscape-canvas.js"></script>
-    <script src="cytoscape-no-overlap.js"></script>
+    <script src="src/cytoscape.min.js"></script>
+    <script src="src/shim.min.js"></script>
+    <script src="src/layout-base.js"></script>
+    <script src="src/cose-base.js"></script>
+    <script src="src/cytoscape-cose-bilkent.js"></script>
+    <script src="src/cytoscape-canvas.js"></script>
+    <script src="src/cytoscape-no-overlap.js"></script>
 
 
     <style>
@@ -96,7 +95,6 @@
 
                 elements: [],
             });
-
             var bases = new Array();
             var maxWidth = -1;
             var minWidth = 999999;
@@ -113,13 +111,6 @@
                         id: i,
                     });
                 }
-            }
-
-            function setSizeOfRandomPoints() {
-                cy.remove(cy.nodes());
-                addSeveralRandomPoints();
-                document.getElementById("layoutButton").click();
-
             }
 
             function Create2DArray(rows) {
@@ -199,43 +190,47 @@
             function calcDistanceArray() {
                 var array = Create2DArray(numberOfPoints);
                 var lenOfNodes = cy.nodes().length;
-                var bound = 18 * Math.sqrt(numberOfPoints);
+                var bound = 20 * Math.sqrt(numberOfPoints);
                 var cw = Math.floor((maxWidth - minWidth) / 2);
                 var ch = Math.floor((maxHeight - minHeight) / 2);
 
                 var i = 0;
                 var j = 0;
                 cy.nodes().forEach(function(node1) {
-                    cy.nodes().forEach(function(node2) {
-                        var x1 = node1.relativePosition().x;
-                        var y1 = node1.relativePosition().y;
-                        var x2 = node2.relativePosition().x;
-                        var y2 = node2.relativePosition().y;
-                        var a = x2 - x1;
-                        var b = y2 - y1;
-                        var distance = Math.sqrt(a * a + b * b);
-                        array[i][j] = distance;
-                        if (distance < bound && distance != 0) {
-                            cy.add({
-                                data: {
-                                    source: node1.id(),
-                                    target: node2.id(),
-                                    style: {
-                                        'line-dash-pattern': [6, 3],
-                                        'line-dash-offset': 0,
-                                    }
+                    if (!bases.includes(node1.id())) {
+                        cy.nodes().forEach(function(node2) {
+                            if (!bases.includes(node2.id())) {
+                                var x1 = node1.relativePosition().x;
+                                var y1 = node1.relativePosition().y;
+                                var x2 = node2.relativePosition().x;
+                                var y2 = node2.relativePosition().y;
+                                var a = x2 - x1;
+                                var b = y2 - y1;
+                                var distance = Math.sqrt(a * a + b * b);
+                                array[i][j] = distance;
+                                if (distance < bound && distance != 0) {
+                                    cy.add({
+                                        data: {
+                                            source: node1.id(),
+                                            target: node2.id(),
+                                            style: {
+                                                'line-dash-pattern': [6, 3],
+                                                'line-dash-offset': 0,
+                                            }
+                                        }
+                                    });
                                 }
-                            });
-                        }
-                        j++;
+                                j++;
 
-                    });
-                    /*
-                    if (isInside(node1.position().x, node1.position().y, cw, ch, bound * 5)) {
-                        node1.style('background-color', 'yellow');
+                            }
+                        });
+                        /*
+                        if (isInside(node1.position().x, node1.position().y, cw, ch, bound * 5)) {
+                            node1.style('background-color', 'yellow');
+                        }
+                        */
+                        i++;
                     }
-                    */
-                    i++;
                 });
                 return array;
             }
@@ -243,9 +238,63 @@
             function refreshEdges() {
                 cy.remove(cy.edges());
                 var distanceMatrix = calcDistanceArray();
+                cy.edges().forEach(function(edge) {
+                    isBothInBase = false;
+                    var sourceEdge = edge.source();
+                    var targetEdge = edge.target();
+
+                    for (var j = 0; j < bases.length; j = j + 1) {
+                        base = cy.getElementById(bases[j]);
+                        var baseCenterX = base.position().x;
+                        var baseCenterY = base.position().y;
+                        var boola = isInside(sourceEdge.position().x, sourceEdge.position().y, baseCenterX, baseCenterY, 90 * Math.sqrt(numberOfPoints));
+                        var boolb = isInside(targetEdge.position().x, targetEdge.position().y, baseCenterX, baseCenterY, 90 * Math.sqrt(numberOfPoints));
+                        if (boola && boolb) {
+                            isBothInBase = true;
+                            break;
+                        }
+                    }
+
+                    if (isBothInBase) {
+                        edge.style('opacity', 0.0);
+                    } else {
+                        edge.style('opacity', 0.5);
+                    }
+                });
+
+                cy.nodes().forEach(function(node) {
+                    isPointInside = false;
+                    for (var j = 0; j < bases.length; j = j + 1) {
+                        baseJ = cy.getElementById(bases[j]);
+                        var baseCenterjX = baseJ.position().x;
+                        var baseCenterjY = baseJ.position().y;
+                        var nodepX = node.position().x;
+                        var nodepY = node.position().y;
+                        if (isInside(nodepX, nodepY, baseCenterjX, baseCenterjY, 90 * Math.sqrt(numberOfPoints))) {
+                            isPointInside = true;
+                            break;
+                        }
+
+                    }
+                    if (isPointInside && !bases.includes(node.id())) {
+                        node.style('background-color', 'red');
+                        node.successors().forEach(function(n2) {
+                            n2.style('background-color', 'red');
+                        });
+                        node.predecessors().forEach(function(n2) {
+                            n2.style('background-color', 'red');
+                        });
+
+                    } else {
+                        node.style('background-color', '#126814');
+                    }
+                });
                 var els = cy.elements().kruskal();
                 cy.elements().remove();
                 cy.add(els);
+
+
+
             }
 
             function isInside(px, py, cx, cy, len) {
@@ -257,16 +306,11 @@
 
             document.getElementById("layoutButton").addEventListener("click", function() {
                 animateStatus = false;
-                removeBases();
                 numberOfPoints = document.getElementById("pointCount").value;
-                var currentSize = cy.nodes().length;
-                if (currentSize > numberOfPoints) {
-                    setSizeOfRandomPoints();
-
-                } else {
-                    addSeveralRandomPoints(currentSize);
-                }
-
+                cy.remove(cy.nodes());
+                cy.remove(cy.edges());
+                addSeveralRandomPoints(0);
+                removeBases();
                 var layout = cy.layout({
                     name: 'preset',
                     nodeSeparation: 125,
@@ -274,14 +318,12 @@
                     padding: 30,
                     animate: false,
                     animation: 'ease-in-out',
-                    animationDuration: 1000,
+                    animationDuration: 2000,
                 });
-                cy.remove(cy.edges());
                 setRandomPositions();
                 layout.run();
             });
             document.getElementById("baseButton").addEventListener("click", function() {
-                //removeBases();
                 addBaseStation();
             });
 
@@ -314,13 +356,18 @@
                     fit: false,
                     animationEasing: 'ease-in-out',
                     transform: (node) => {
-                        let position = {};
-                        position.x = (Math.floor(Math.random() * offset) - offset / 2) + node.position('x');
-                        position.y = (Math.floor(Math.random() * offset) - offset / 2) + node.position('y');
-                        return position;
+                        if (!bases.includes(node.id())) {
+                            let position = {};
+                            position.x = (Math.floor(Math.random() * offset) - offset / 2) + node.position('x');
+                            position.y = (Math.floor(Math.random() * offset) - offset / 2) + node.position('y');
+                            return position;
+                        } else {
+                            return node.position();
+                        }
                     }
                 }).run();
                 refreshEdges();
+                //sleep(1000)
             }
 
             cy.on('layoutstop', function(e) {
@@ -329,6 +376,7 @@
                 } else if (!e.target.options.dsa) {
                     refreshEdges();
                 }
+
             });
 
             function sleep(time) {
