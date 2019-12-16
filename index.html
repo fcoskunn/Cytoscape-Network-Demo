@@ -102,6 +102,8 @@
             var minHeight = 999999;
             var animateStatus = false;
             var numberOfPoints = 0;
+            var connectedInBase = 0;
+            var connectedAll = 0;
 
             function addSeveralRandomPoints(currentNodeNumber) {
                 var i;
@@ -236,6 +238,8 @@
             }
 
             function refreshEdges() {
+                connectedInBase = 0;
+                connectedAll = 0;
                 cy.remove(cy.edges());
                 var distanceMatrix = calcDistanceArray();
                 cy.edges().forEach(function(edge) {
@@ -256,11 +260,15 @@
                     }
 
                     if (isBothInBase) {
-                        edge.style('opacity', 0.0);
+                        cy.remove(edge);
                     } else {
                         edge.style('opacity', 0.5);
                     }
                 });
+
+                var els = cy.elements().kruskal();
+                cy.elements().remove();
+                cy.add(els);
 
                 cy.nodes().forEach(function(node) {
                     isPointInside = false;
@@ -278,22 +286,19 @@
                     }
                     if (isPointInside && !bases.includes(node.id())) {
                         node.style('background-color', 'red');
+                        connectedInBase++;
                         node.successors().forEach(function(n2) {
                             n2.style('background-color', 'red');
-                        });
-                        node.predecessors().forEach(function(n2) {
-                            n2.style('background-color', 'red');
+                            connectedAll++;
                         });
 
                     } else {
                         node.style('background-color', '#126814');
                     }
                 });
-                var els = cy.elements().kruskal();
-                cy.elements().remove();
-                cy.add(els);
-
-
+                connectedAll = connectedAll / 2 + connectedInBase;
+                console.log("Connected In Base: ", connectedInBase);
+                console.log("Connected All: ", connectedAll)
 
             }
 
@@ -328,6 +333,7 @@
             });
 
             document.getElementById("animateButton").addEventListener("click", function() {
+                refreshEdges();
                 if (!animateStatus) {
                     animateStatus = true;
                     animateNodes();
@@ -337,6 +343,8 @@
             cy.on('click', function(e) {
                 var clickedNode = e.target;
                 console.log(clickedNode.$id());
+                console.log(clickedNode.successors().length)
+
             });
 
             cy.on('dragon', function(e) {
@@ -372,7 +380,7 @@
 
             cy.on('layoutstop', function(e) {
                 if (e.target.options.dsa && animateStatus) {
-                    animateNodes();
+                    // animateNodes();
                 } else if (!e.target.options.dsa) {
                     refreshEdges();
                 }
