@@ -21,6 +21,10 @@
             font-size: 15px;
         }
         
+        .bt {
+            color: darkgreen;
+        }
+        
         #cy {
             width: 100%;
             height: 90%;
@@ -102,8 +106,8 @@
             var minHeight = 999999;
             var animateStatus = false;
             var numberOfPoints = 0;
-            var connectedInBase = 0;
-            var connectedAll = 0;
+            var BaseReds = new Array();
+            var dataArray = new Array();
 
             function addSeveralRandomPoints(currentNodeNumber) {
                 var i;
@@ -189,13 +193,47 @@
                 });
             }
 
+            function markRed() {
+                var BaseRedNum = BaseReds.length;
+                for (var i = 0; i < BaseRedNum; i++) {
+                    var node = cy.getElementById(BaseReds[i]);
+                    var bfs = cy.elements().bfs({
+                        roots: node,
+                        visit: function(v, e, u, i, depth) {
+                            v.style('background-color', 'red');
+
+                        },
+                        directed: false
+                    });
+                }
+            }
+
+            function clearNodeColor() {
+                cy.nodes().forEach(function(node) {
+                    if (!bases.includes(node.id())) {
+                        node.style('background-color', '#00695C');
+                    }
+                });
+            }
+
+            function redNodeNum() {
+                var reds = 0;
+                cy.nodes().forEach(function(node) {
+                    if (!bases.includes(node.id())) {
+                        if (node.style('background-color') == 'rgb(255,0,0)') {
+                            reds++;
+                        }
+                    }
+                });
+                return reds;
+            }
+
             function calcDistanceArray() {
                 var array = Create2DArray(numberOfPoints);
                 var lenOfNodes = cy.nodes().length;
                 var bound = 20 * Math.sqrt(numberOfPoints);
                 var cw = Math.floor((maxWidth - minWidth) / 2);
                 var ch = Math.floor((maxHeight - minHeight) / 2);
-
                 var i = 0;
                 var j = 0;
                 cy.nodes().forEach(function(node1) {
@@ -238,8 +276,8 @@
             }
 
             function refreshEdges() {
-                connectedInBase = 0;
-                connectedAll = 0;
+                BaseReds = new Array();
+                clearNodeColor();
                 cy.remove(cy.edges());
                 var distanceMatrix = calcDistanceArray();
                 cy.edges().forEach(function(edge) {
@@ -285,22 +323,17 @@
 
                     }
                     if (isPointInside && !bases.includes(node.id())) {
-                        node.style('background-color', 'red');
-                        connectedInBase++;
-                        node.successors().forEach(function(n2) {
-                            n2.style('background-color', 'red');
-                            connectedAll++;
-                        });
-
-                    } else {
-                        node.style('background-color', '#126814');
+                        BaseReds.push(node.id());
                     }
                 });
-                connectedAll = connectedAll / 2 + connectedInBase;
-                console.log("Connected In Base: ", connectedInBase);
-                console.log("Connected All: ", connectedAll)
-
+                markRed();
+                var reds = redNodeNum();
+                var base_reds = BaseReds.length
+                document.getElementById('all_text').innerHTML = reds;
+                document.getElementById('base_text').innerHTML = base_reds;
+                dataArray.push(base_reds + ", " + reds);
             }
+
 
             function isInside(px, py, cx, cy, len) {
                 var a = px - cx;
@@ -328,8 +361,13 @@
                 setRandomPositions();
                 layout.run();
             });
+
             document.getElementById("baseButton").addEventListener("click", function() {
                 addBaseStation();
+            });
+
+            document.getElementById("baseButton").addEventListener("click", function() {
+                console.log(dataArray);
             });
 
             document.getElementById("animateButton").addEventListener("click", function() {
@@ -342,9 +380,6 @@
 
             cy.on('click', function(e) {
                 var clickedNode = e.target;
-                console.log(clickedNode.$id());
-                console.log(clickedNode.successors().length)
-
             });
 
             cy.on('dragon', function(e) {
@@ -380,7 +415,7 @@
 
             cy.on('layoutstop', function(e) {
                 if (e.target.options.dsa && animateStatus) {
-                    // animateNodes();
+                    animateNodes();
                 } else if (!e.target.options.dsa) {
                     refreshEdges();
                 }
@@ -402,6 +437,9 @@
         <button id="layoutButton" type="button">Randomize</button>
         <button id="baseButton" type="button">Base</button>
         <button id="animateButton" type="button">Animate</button>
+        <button id="dataButton" type="button">Log Data</button>
+        <button class="bt" type="text" disabled>BASE  <span id="base_text">0</span></button>
+        <button class="bt" type="text" disabled>ALL   <span id="all_text">0</span></button>
         <div id="cy"></div>
 
 </body>
