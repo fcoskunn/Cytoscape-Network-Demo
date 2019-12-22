@@ -134,7 +134,9 @@
                 bases = new Array();
             }
 
-            function addBaseStation() {
+            function addBaseStation(px, py) {
+                px = Math.floor(px);
+                py = Math.floor(py);
                 var bound = 180 * Math.sqrt(numberOfPoints);
                 var added = cy.add({
                     group: 'nodes',
@@ -142,7 +144,7 @@
                     style: {
                         'background-color': '#00695C',
                         'shape': 'ellipse',
-                        'background-opacity': 0.5,
+                        'background-opacity': 0.4,
                         'width': bound,
                         'height': bound,
                         'border-style': 'dotted',
@@ -150,8 +152,8 @@
                         'border-opacity': 0.3,
                     },
                     position: {
-                        x: Math.floor((maxWidth - minWidth) / 2),
-                        y: Math.floor((maxHeight - minHeight) / 2)
+                        x: px,
+                        y: py
                     }
 
                 }, );
@@ -343,6 +345,10 @@
             }
 
             document.getElementById("layoutButton").addEventListener("click", function() {
+                maxWidth = -1;
+                minWidth = 999999;
+                maxHeight = -1;
+                minHeight = 999999;
                 animateStatus = false;
                 numberOfPoints = document.getElementById("pointCount").value;
                 cy.remove(cy.nodes());
@@ -363,7 +369,38 @@
             });
 
             document.getElementById("baseButton").addEventListener("click", function() {
-                addBaseStation();
+                removeBases();
+                baseNum = document.getElementById("baseCount").value;
+                switch (parseInt(baseNum)) {
+                    case 1:
+                        addBaseStation((maxWidth - minWidth) / 2, (maxHeight - minHeight) / 2);
+                        break;
+                    case 2:
+                        addBaseStation((maxWidth - minWidth) / 4, (maxHeight - minHeight) / 2);
+                        addBaseStation((maxWidth - minWidth) * 3 / 4, (maxHeight - minHeight) / 2);
+                        break;
+                    case 3:
+                        addBaseStation((maxWidth - minWidth) * 1 / 6, (maxHeight - minHeight) / 3);
+                        addBaseStation((maxWidth - minWidth) * 3 / 6, (maxHeight - minHeight) * 2 / 3);
+                        addBaseStation((maxWidth - minWidth) * 5 / 6, (maxHeight - minHeight) / 3);
+                        break;
+                    case 4:
+                        addBaseStation((maxWidth - minWidth) / 5, (maxHeight - minHeight) / 4);
+                        addBaseStation((maxWidth - minWidth) * 3 / 5, (maxHeight - minHeight) / 4);
+                        addBaseStation((maxWidth - minWidth) * 2 / 5, (maxHeight - minHeight) * 3 / 4);
+                        addBaseStation((maxWidth - minWidth) * 4 / 5, (maxHeight - minHeight) * 3 / 4);
+                        break;
+                    case 5:
+                        addBaseStation((maxWidth - minWidth) / 6, (maxHeight - minHeight) / 4);
+                        addBaseStation((maxWidth - minWidth) / 2, (maxHeight - minHeight) / 4);
+                        addBaseStation((maxWidth - minWidth) * 5 / 6, (maxHeight - minHeight) / 4);
+                        addBaseStation((maxWidth - minWidth) * 1 / 3, (maxHeight - minHeight) * 3 / 4);
+                        addBaseStation((maxWidth - minWidth) * 2 / 3, (maxHeight - minHeight) * 3 / 4);
+                        break;
+                    default:
+                        alert("I don't know such values");
+                }
+
             });
 
             document.getElementById("baseButton").addEventListener("click", function() {
@@ -432,9 +469,10 @@
 
 <body>
     <h1 id="kss">GLB 301 Simulation</h1>
-    <input id="pointCount" type="number" style="width: 60px;" name="quantity" min="1" max="999" value="40">
+    <input id="pointCount" type="number" style="width: 60px;" name="quantity" min="1" max="999" value="200">
     <a data-toggle="tooltip" data-placement="auto">
         <button id="layoutButton" type="button">Randomize</button>
+        <input id="baseCount" type="number" style="width: 30px;" name="quantity" min="1" max="5" value="2">
         <button id="baseButton" type="button">Base</button>
         <button id="animateButton" type="button">Animate</button>
         <button id="dataButton" type="button">Log Data</button>
